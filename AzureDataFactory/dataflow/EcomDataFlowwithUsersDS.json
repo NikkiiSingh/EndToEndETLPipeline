@@ -1,5 +1,5 @@
 {
-	"name": "dataflow1",
+	"name": "EcomDataFlowwithUsersDS",
 	"properties": {
 		"type": "MappingDataFlow",
 		"typeProperties": {
