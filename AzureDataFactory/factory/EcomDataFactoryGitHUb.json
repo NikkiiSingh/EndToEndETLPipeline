@@ -1,0 +1,9 @@
+{
+	"name": "EcomDataFactoryGitHUb",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "65369a60-6d45-4d09-b697-f7ec1aa696cb",
+		"tenantId": "82676786-5bc7-43c6-b8f8-b3ee02b0b5f3"
+	}
+}
