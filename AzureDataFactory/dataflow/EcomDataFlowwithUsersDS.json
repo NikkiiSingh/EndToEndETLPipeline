@@ -3,11 +3,64 @@
 	"properties": {
 		"type": "MappingDataFlow",
 		"typeProperties": {
-			"sources": [],
-			"sinks": [],
-			"transformations": [],
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Users",
+						"type": "DatasetReference"
+					},
+					"name": "RawUserLogs"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "FinalOutput",
+						"type": "DatasetReference"
+					},
+					"name": "finalDataDumping",
+					"rejectedDataLinkedService": {
+						"referenceName": "AzureDataLakeStorage1",
+						"type": "LinkedServiceReference"
+					}
+				}
+			],
+			"transformations": [
+				{
+					"name": "ParseTimestamp"
+				},
+				{
+					"name": "UniqueVisitorsperDay"
+				}
+			],
 			"scriptLines": [
-				""
+				"source(output(",
+				"          user_id as string,",
+				"          event_time as string,",
+				"          event_type as string,",
+				"          product_id as string,",
+				"          category as string,",
+				"          brand as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: true,",
+				"     inferDriftedColumnTypes: true,",
+				"     limit: 100,",
+				"     ignoreNoFilesFound: false) ~> RawUserLogs",
+				"RawUserLogs derive(event_date = toDate(event_time),",
+				"          event_hour = hour(toTimestamp(event_time)),",
+				"          weekday = dayOfWeek(toTimestamp(event_time))) ~> ParseTimestamp",
+				"ParseTimestamp aggregate(groupBy(event_date),",
+				"     unique_visitors = countDistinct(user_id)) ~> UniqueVisitorsperDay",
+				"UniqueVisitorsperDay sink(allowSchemaDrift: true,",
+				"     validateSchema: true,",
+				"     format: 'parquet',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1) ~> finalDataDumping"
 			]
 		}
 	}
