@@ -563,7 +563,7 @@
 					"sources": [
 						{
 							"dataset": {
-								"referenceName": "Users",
+								"referenceName": "NovData2019",
 								"type": "DatasetReference"
 							},
 							"name": "users"
@@ -600,12 +600,15 @@
 					],
 					"scriptLines": [
 						"source(output(",
-						"          user_id as string,",
 						"          event_time as string,",
 						"          event_type as string,",
 						"          product_id as string,",
-						"          category as string,",
-						"          brand as string",
+						"          category_id as string,",
+						"          category_code as string,",
+						"          brand as string,",
+						"          price as string,",
+						"          user_id as string,",
+						"          user_session as string",
 						"     ),",
 						"     allowSchemaDrift: true,",
 						"     validateSchema: false,",
@@ -615,6 +618,8 @@
 						"          event_hour = hour(toTimestamp(event_time)),",
 						"          weekday = dayOfWeek(toTimestamp(event_time)),",
 						"          user_id = toInteger(user_id),",
+						"          category_id = toInteger(category_id),",
+						"          price = toInteger(price),",
 						"          event_time = toTimestamp(event_time, 'yyyy-MM-dd\\'T\\'HH:mm:ss\\'Z\\''),",
 						"          product_id = toInteger(product_id)) ~> ParseTimestamp",
 						"ParseTimestamp filter(event_type == 'cart') ~> CartOnly",
@@ -630,11 +635,12 @@
 						"          purchase_time = event_time,",
 						"          purchase_event = event_type,",
 						"          purchase_product_id = product_id,",
-						"          purchase_category = category,",
+						"          purchase_category_id = category_id,",
 						"          purchase_brand = brand,",
 						"          purchase_date = event_date,",
 						"          purchase_hour = event_hour,",
-						"          purchase_weekday = weekday",
+						"          purchase_weekday = weekday,",
+						"          purchase_time = event_time",
 						"     ),",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true) ~> SelectPurchase",
@@ -651,7 +657,7 @@
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/Users')]",
+				"[concat(variables('factoryId'), '/datasets/NovData2019')]",
 				"[concat(variables('factoryId'), '/datasets/addtocartbutnopurchase')]"
 			]
 		},
