@@ -172,6 +172,34 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/hourlytopcategories')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "top_categories_hourly",
+						"fileSystem": "processed"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/CartAddedbutNoPurchase')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
@@ -348,6 +376,80 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/TopCategoriesPerHour')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Users",
+								"type": "DatasetReference"
+							},
+							"name": "users"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "hourlytopcategories",
+								"type": "DatasetReference"
+							},
+							"name": "final"
+						}
+					],
+					"transformations": [
+						{
+							"name": "ParseTimestamp"
+						},
+						{
+							"name": "FilterOnEventTyppe"
+						},
+						{
+							"name": "aggregate1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          user_id as string,",
+						"          event_time as string,",
+						"          event_type as string,",
+						"          product_id as string,",
+						"          category as string,",
+						"          brand as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     limit: 100,",
+						"     ignoreNoFilesFound: false) ~> users",
+						"users derive(event_date = toDate(event_time),",
+						"          event_hour = hour(toTimestamp(event_time)),",
+						"          weekday = dayOfWeek(toTimestamp(event_time)),",
+						"          user_id = toInteger(user_id),",
+						"          event_time = toTimestamp(event_time, 'yyyy-MM-dd\\'T\\'HH:mm:ss\\'Z\\''),",
+						"          product_id = toInteger(product_id)) ~> ParseTimestamp",
+						"ParseTimestamp filter(event_type == 'purchase') ~> FilterOnEventTyppe",
+						"FilterOnEventTyppe aggregate(groupBy(event_hour,",
+						"          category),",
+						"     purchases = count(user_id)) ~> aggregate1",
+						"aggregate1 sink(allowSchemaDrift: true,",
+						"     validateSchema: true,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> final"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Users')]",
+				"[concat(variables('factoryId'), '/datasets/hourlytopcategories')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/CartAddedbutNoPurchase')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -391,6 +493,52 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/dataflows/CartAddedbutNoPurchase')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/TopCategoriesPerHour')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "TopCategoriesPerHour",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "TopCategoriesPerHour",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"users": {},
+									"final": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/TopCategoriesPerHour')]"
 			]
 		},
 		{
