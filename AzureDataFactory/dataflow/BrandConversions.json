@@ -1,5 +1,5 @@
 {
-	"name": "TopCategoriesPerHour",
+	"name": "BrandConversions",
 	"properties": {
 		"type": "MappingDataFlow",
 		"typeProperties": {
@@ -15,7 +15,7 @@
 			"sinks": [
 				{
 					"dataset": {
-						"referenceName": "hourlytopcategories",
+						"referenceName": "topbrand",
 						"type": "DatasetReference"
 					},
 					"name": "final"
@@ -45,7 +45,8 @@
 				"          user_session as string",
 				"     ),",
 				"     allowSchemaDrift: true,",
-				"     validateSchema: false,",
+				"     validateSchema: true,",
+				"     inferDriftedColumnTypes: true,",
 				"     limit: 100,",
 				"     ignoreNoFilesFound: false) ~> users",
 				"users derive(event_date = toDate(event_time),",
@@ -53,15 +54,15 @@
 				"          weekday = dayOfWeek(toTimestamp(event_time)),",
 				"          user_id = toInteger(user_id),",
 				"          event_time = toTimestamp(event_time, 'yyyy-MM-dd\\'T\\'HH:mm:ss\\'Z\\''),",
-				"          product_id = toInteger(product_id),",
 				"          category_id = toInteger(category_id),",
-				"          price = toInteger(price)) ~> ParseTimestamp",
+				"          price = toInteger(price),",
+				"          product_id = toInteger(product_id)) ~> ParseTimestamp",
 				"ParseTimestamp filter(event_type == 'purchase') ~> FilterOnEventTyppe",
-				"FilterOnEventTyppe aggregate(groupBy(event_hour,",
-				"          category_id),",
-				"     purchases = count(user_id)) ~> aggregate1",
+				"FilterOnEventTyppe aggregate(groupBy(brand),",
+				"     total_purchases = count(user_id)) ~> aggregate1",
 				"aggregate1 sink(allowSchemaDrift: true,",
 				"     validateSchema: true,",
+				"     format: 'parquet',",
 				"     umask: 0022,",
 				"     preCommands: [],",
 				"     postCommands: [],",

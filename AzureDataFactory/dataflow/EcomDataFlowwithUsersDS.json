@@ -6,7 +6,7 @@
 			"sources": [
 				{
 					"dataset": {
-						"referenceName": "Users",
+						"referenceName": "NovData2019",
 						"type": "DatasetReference"
 					},
 					"name": "RawUserLogs"
@@ -35,12 +35,15 @@
 			],
 			"scriptLines": [
 				"source(output(",
-				"          user_id as string,",
 				"          event_time as string,",
 				"          event_type as string,",
 				"          product_id as string,",
-				"          category as string,",
-				"          brand as string",
+				"          category_id as string,",
+				"          category_code as string,",
+				"          brand as string,",
+				"          price as string,",
+				"          user_id as string,",
+				"          user_session as string",
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: true,",
