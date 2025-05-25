@@ -67,6 +67,34 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/CartAddedbutNoPurchase')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "cartaddedbutnopurchase",
+						"fileSystem": "processed"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/FinalOutput')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -145,6 +173,34 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/addtocartbutnopurchase')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureDataLakeStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "cartaddedbutnopurchase",
+						"fileSystem": "processed"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/AzureDataLakeStorage1')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -160,6 +216,108 @@
 				}
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/CartAddedbutNoPurchase')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Users",
+								"type": "DatasetReference"
+							},
+							"name": "users"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "addtocartbutnopurchase",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "ParseTimestamp"
+						},
+						{
+							"name": "CartOnly"
+						},
+						{
+							"name": "PurchaseOnly"
+						},
+						{
+							"name": "join1"
+						},
+						{
+							"name": "SelectPurchase"
+						},
+						{
+							"name": "AbandonedCartsAgg"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          user_id as string,",
+						"          event_time as string,",
+						"          event_type as string,",
+						"          product_id as string,",
+						"          category as string,",
+						"          brand as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     limit: 100,",
+						"     ignoreNoFilesFound: false) ~> users",
+						"users derive(event_date = toDate(event_time),",
+						"          event_hour = hour(toTimestamp(event_time)),",
+						"          weekday = dayOfWeek(toTimestamp(event_time)),",
+						"          user_id = toInteger(user_id),",
+						"          event_time = toTimestamp(event_time, 'yyyy-MM-dd\\'T\\'HH:mm:ss\\'Z\\''),",
+						"          product_id = toInteger(product_id)) ~> ParseTimestamp",
+						"ParseTimestamp filter(event_type == 'cart') ~> CartOnly",
+						"ParseTimestamp filter(event_type == 'purchase') ~> PurchaseOnly",
+						"CartOnly, SelectPurchase join(user_id == purchase_user_id",
+						"     && product_id == purchase_product_id,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join1",
+						"PurchaseOnly select(mapColumn(",
+						"          purchase_user_id = user_id,",
+						"          purchase_time = event_time,",
+						"          purchase_event = event_type,",
+						"          purchase_product_id = product_id,",
+						"          purchase_category = category,",
+						"          purchase_brand = brand,",
+						"          purchase_date = event_date,",
+						"          purchase_hour = event_hour,",
+						"          purchase_weekday = weekday",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectPurchase",
+						"join1 aggregate(groupBy(event_date),",
+						"     abandoned_carts = count(user_id)) ~> AbandonedCartsAgg",
+						"AbandonedCartsAgg sink(allowSchemaDrift: true,",
+						"     validateSchema: true,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Users')]",
+				"[concat(variables('factoryId'), '/datasets/addtocartbutnopurchase')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/EcomDataFlowwithUsersDS')]",
@@ -234,6 +392,18 @@
 				"[concat(variables('factoryId'), '/datasets/FinalOutput')]",
 				"[concat(variables('factoryId'), '/linkedServices/AzureDataLakeStorage1')]"
 			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pipeline1')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": []
 		}
 	]
 }
