@@ -79,7 +79,7 @@
 				"          purchase_event = event_type,",
 				"          purchase_product_id = product_id,",
 				"          purchase_category_id = category_id,",
-				"          purchase_brand = users@brand,",
+				"          purchase_brand = brand,",
 				"          purchase_date = event_date,",
 				"          purchase_hour = event_hour,",
 				"          purchase_weekday = weekday,",
